@@ -1,0 +1,432 @@
+-- create tables
+
+create table Player_details(p_id int primary key,first_name varchar(64),last_name varchar(64),country varchar(32),age numeric(10,2),DOB date,address varchar(64),P_type varchar(64),debut date);
+							
+create table Performance(per_id int primary key,p_id int,p_type varchar(32),matches int,t_runs int,p_ball int,bat_avg numeric(10,2),str numeric(10,2), centurys int,fiftys int,sixes int ,fours int,wickets int,b_over numeric(10,2),b_ball int,g_run int,eco numeric(10,2),b_avg numeric(10,2),constraint f_key foreign key (p_id) references player_details(p_id));
+						 
+create table test(per_id int , matches int  ,runs int ,p_ball int ,bat_avg numeric(10,2),str numeric(10,2) ,centurys int,fiftys int,sixes int,fours int ,wicket int, b_over numeric(10,2),b_ball int,g_run int ,eco numeric (10,2) ,b_avg numeric (10,2) ,constraint f_key foreign key (per_id) references performance (per_id));
+				  
+create table T20(per_id int , matches int  ,runs int ,p_ball int ,bat_avg numeric(10,2),str numeric(10,2) ,centurys int,fiftys int, sixes int,fours int ,wicket int, b_over numeric(10,2),b_ball int,g_run int ,eco numeric (10,2) ,b_avg numeric (10,2), constraint f_key foreign key (per_id) references performance (per_id));
+				 
+create table ODI(per_id int , matches int  ,runs int ,p_ball int ,bat_avg numeric(10,2),str numeric(10,2) ,centurys int,fiftys int,sixes int,fours int ,wicket int, b_over numeric(10,2),b_ball int,g_run int ,eco numeric (10,2) ,b_avg numeric (10,2), constraint f_key foreign key (per_id) references performance (per_id));
+
+-- insert into player details procedure
+
+create or replace procedure insertDetail(id int,per_id int,f_name varchar(64),l_name varchar(64),country varchar(32),age numeric(10,2),dob date,address varchar(64),p_type varchar(64),debut date)
+
+as
+$$
+	begin
+		insert into player_details values (id,f_name,l_name,country,age,dob,address,p_type,debut);
+		insert into performance values(per_id,id,p_type,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
+	end;
+$$
+language plpgsql;
+
+-- insert into test table Procedure
+
+create or replace Procedure insertTestData(per_id int,matches int,run int,p_ball int,centurey int,fifty int,six int,four int,wicket int,b_ball int,g_run int)
+
+as
+$$
+	declare
+		bat_avg test.bat_avg%type:=0;
+		str test.str%type:=0;
+		eco test.eco%type:=0;
+		b_avg test.b_avg%type:=0;
+		b_over numeric(10,2):=0;
+	begin
+		bat_avg=(run*1.0)/matches;
+		if p_ball!=0 then
+		str=run*100.0/p_ball;
+		end if;
+		b_over=b_ball/6.0;
+		if b_over!=0 then
+		eco=g_run/b_over;
+		end if;
+		if wicket!=0 then
+		b_avg=g_run/(wicket*1.0);
+		else
+		b_avg=0;
+		end if;
+		insert into test values (per_id,matches,run,p_ball,bat_avg,str,centurey,fifty,six,four,wicket,b_over,b_ball,g_run,eco,b_avg);
+	end;
+$$
+language plpgsql;
+
+-- insert into odi procedure
+
+create or replace Procedure insertOdiData(per_id int,matches int,run int,p_ball int,centurey int,fifty int,six int,four int,wicket int,b_ball int,g_run int)
+
+as
+$$
+	declare
+		bat_avg odi.bat_avg%type;
+		str odi.str%type;
+		eco odi.eco%type;
+		b_avg odi.b_avg%type;
+		b_over numeric(10,2);
+	begin
+		bat_avg=(run*1.0)/matches;
+		if p_ball!=0 then
+		str=run*100.0/p_ball;
+		end if;
+		b_over=b_ball/6.0;
+		if b_over!=0 then
+		eco=g_run/b_over;
+		end if;
+		if wicket!=0 then
+		b_avg=g_run/(wicket*1.0);
+		else
+		b_avg=0;
+		end if;
+		insert into odi values (per_id,matches,run,p_ball,bat_avg,str,centurey,fifty,six,four,wicket,b_over,b_ball,g_run,eco,b_avg);
+	end;
+$$
+language plpgsql;
+
+-- insert into t20 procedure
+
+create or replace Procedure insertT20Data(per_id int,matches int,run int,p_ball int,centurey int,fifty int,six int,four int,wicket int,b_ball int,g_run int)
+
+as
+$$
+	declare
+		bat_avg t20.bat_avg%type;
+		str t20.str%type;
+		eco t20.eco%type;
+		b_avg t20.b_avg%type;
+		b_over numeric(10,2);
+	begin
+		bat_avg=(run*1.0)/matches;
+		if p_ball!=0 then
+		str=run*100.0/p_ball;
+		end if;
+		b_over=b_ball/6.0;
+		if b_over!=0 then
+		eco=g_run/b_over;
+		end if;
+		if wicket!=0 then
+		b_avg=g_run/(wicket*1.0);
+		else
+		b_avg=0;
+		end if;
+		insert into t20 values (per_id,matches,run,p_ball,bat_avg,str,centurey,fifty,six,four,wicket,b_over,b_ball,g_run,eco,b_avg);
+	end;
+$$
+language plpgsql;
+
+-- insertion time trigger function to update data in performance table
+
+create or replace function trigger_updateData() returns Trigger
+as
+$$
+
+	declare
+
+		ba_avg performance.bat_avg%type:=0;
+		sr performance.str%type:=0;
+		ec performance.eco%type:=0;
+		bowl_avg performance.b_avg%type:=0;
+		match int;
+		run int;
+		w int;
+		pball int;
+		grun int;
+		bball int;
+		c_cursor cursor for select matches,t_runs,p_ball,wickets,b_ball,g_run from performance where per_id=new.per_id;
+
+	begin
+
+		update performance set matches=performance.matches+new.matches,t_runs=performance.t_runs+new.runs,p_ball=performance.p_ball+new.p_ball,centurys=performance.centurys+new.centurys,fiftys=performance.fiftys+new.fiftys,sixes=performance.sixes+new.sixes,fours=performance.fours+new.fours,wickets=performance.wickets+new.wicket,b_over=performance.b_over+new.b_over,b_ball=performance.b_ball+new.b_ball,g_run=performance.g_run+new.g_run where per_id=new.per_id;
+		open c_cursor;
+			loop
+				fetch c_cursor into match,run,pball,w,bball,grun;
+				exit when not found;
+				ba_avg=(run*1.0)/match;
+				if pball!=0 then
+				sr=run*100.0/pball;
+				end if;
+				if bball!=0 then
+				ec=(grun*6.0)/bball;
+				end if;
+				if w!=0 then
+				bowl_avg=grun/(w*1.0);
+				end if;
+				update performance set bat_avg=ba_avg,str=sr,eco=ec,b_avg=bowl_avg where per_id=new.per_id;
+			end loop;
+		close c_cursor;
+	return new;
+
+	end;
+$$
+language plpgsql;
+
+create trigger updat after insert on test for each row execute procedure trigger_updateData();
+create trigger updat after insert on odi for each row execute procedure trigger_updateData();
+create trigger updat after insert on t20 for each row execute procedure trigger_updateData();
+
+
+call insertDetail(1,101,'Rohit','Sharma','India',36,'1987-03-30','Mumbai','Batsman','2007-06-23');
+call insertTestData(101,52,3677,6534,10,16,77,394,2,383,224);
+call insertOdiData(101,251,10112,11170,30,52,292,928,8,593,515);
+call insertT20Data(101,148,3853,2767,4,29,182,348,1,68,113);
+
+call insertDetail(2,102,'Virat','Kohli','India',34,'1988-11-05','Delhi','Batsman','2008-08-18');
+call insertTestData(102,111,8676,15708,29,29,24,966,0,175,84);
+call insertOdiData(102,281,13083,13950,47,66,143,1226,4,642,665);
+call insertT20Data(102,115,4008,2905,1,37,117,356,4,152,204);
+
+
+call insertDetail(3,103,'Shubhaman','Gill','India',24,'1999-09-08','Punjab','Batsman','2019-01-31');
+call insertTestData(103,18,966,1638,2,4,13,112,0,7,1);
+call insertOdiData(103,35,1917,1864,6,9,40,213,0,0,0);
+call insertT20Data(103,11,304,207,1,1,16,24,0,0,0);
+
+
+call insertDetail(4,104,'KL','Rahul','India',31,'1992-03-18','Karnataka','Wicketkeeper','2014-12-26');
+call insertTestData(104,47,2642,5116,7,13,18,318,0,0,0);
+call insertOdiData(104,61,2291,2614,6,15,52,177,0,0,0);
+call insertT20Data(104,72,2265,1628,2,22,99,191,0,0,0);
+
+
+call insertDetail(5,105,'Shreyas','Iyer','India',28,'1994-12-06','Mumbai','Batsman','2017-11-01');
+call insertTestData(105,10,666,1012,1,5,14,80,0,6,2);
+call insertOdiData(105,47,1801,1840,3,14,37,176,0,37,39);
+call insertT20Data(105,49,1043,767,0,7,42,85,0,2,2);
+
+
+call insertDetail(6,106,'Ishan','Kishan','India',25,'1998-07-18','Patana','Wicketkeeper','2021-03-14');
+call insertTestData(106,2,78,91,0,1,2,8,0,0,0);
+call insertOdiData(106,25,886,865,1,7,31,90,0,0,0);
+call insertT20Data(106,29,686,564,0,4,27,74,0,0,0);
+
+
+call insertDetail(7,107,'SuryaKumar','Yadav','India',33,'1990-09-14','Mumbai','Batsman','2021-03-14');
+call insertTestData(107,1,8,20,0,0,0,1,0,0,0);
+call insertOdiData(107,30,667,631,0,4,18,68,0,0,0);
+call insertT20Data(107,53,1841,1066,3,15,104,166,0,0,0);
+
+
+call insertDetail(8,108,'Hardik','Pandya','India',29,'1993-10-11','Gujrat','AllRounder','2016-01-26');
+call insertTestData(108,11,532,720,1,4,12,68,17,937,528);
+call insertOdiData(108,82,1758,1595,0,11,66,132,79,3100,2847);
+call insertT20Data(108,92,1348,964,0,3,69,96,73,1433,1950);
+
+
+call insertDetail(9,109,'Ravindra','Jadeja','India',34,'1988-12-06','Gujrat','AllRounder','2009-02-08');
+call insertTestData(109,67,2804,4915,3,19,58,283,275,16354,6620);
+call insertOdiData(109,186,2636,3122,0,13,51,192,204,9189,7538);
+call insertT20Data(109,64,457,367,0,0,12,34,51,1237,1453);
+
+
+call insertDetail(10,110,'Ashwin','Ravichandran','India',37,'1986-09-17','Madras','AllRounder','2010-06-05');
+call insertTestData(110,94,3185,5832,5,14,20,365,489,25113,11569);
+call insertOdiData(110,115,707,813,0,1,7,60,155,6243,5164);
+call insertT20Data(110,65,184,160,0,0,4,17,72,1452,1672);
+
+
+call insertDetail(11,111,'Siraj','Mohammed','India',29,'1994-03-13','Hyderabad','Bowler','2017-11-04');
+call insertTestData(111,21,80,190,0,0,2,9,59,3275,1784);
+call insertOdiData(111,30,37,92,0,0,0,2,54,1330,1081);
+call insertT20Data(111,8,5,7,0,0,0,1,11,192,294);
+
+
+call insertDetail(12,112,'Jasprit','Bumrah','India',29,'1993-12-06','Gujrat','Bowler','2016-01-23');
+call insertTestData(112,30,212,455,0,0,6,24,128,6268,2815);
+call insertOdiData(112,78,73,130,0,0,1,9,129,4029,3136);
+call insertT20Data(112,62,8,13,0,0,0,1,74,1331,1455);
+
+
+call insertDetail(13,113,'Shami','Mohammed','India',33,'1990-09-03','Uttar Pradesh','Bowler','2013-01-06');
+call insertTestData(113,64,750,1005,0,2,25,83,229,11515,6346);
+call insertOdiData(113,94,210,245,0,0,9,16,171,4692,4361);
+call insertT20Data(113,23,0,0,0,0,0,0,24,477,711);
+
+
+call insertDetail(14,114,'Ruturaj','Gaikwad','India',26,'1997-01-31','Maharastra','Batsman','2021-07-28');
+call insertOdiData(114,4,106,145,0,1,0,14,0,0,0);
+call insertT20Data(114,11,212,168,0,2,7,20,0,0,0);
+
+
+call insertDetail(15,115,'Yasasvi','Jaiswal','India',21,'2001-12-28','Uttar Pradesh','Batsman','2023-08-08');
+call insertTestData(115,2,266,491,1,1,3,29,0,0,0);
+-- call insertOdiData(115,);
+call insertT20Data(115,5,132,91,0,1,5,17,0,6,11);
+
+
+call insertDetail(16,116,'Rahul','Tripathi','India',32,'1991-03-02','Jarkhand','Batsman','2023-01-10');
+call insertT20Data(116,5,97,67,0,0,5,11,0,0,0);
+-- call insertOdiData(116);
+-- call insertT20Data(116);
+
+
+call insertDetail(17,117,'Tilak','Verma','India',20,'2002-11-08','Aandhra Pradesh','Batsman','2023-08-03');
+-- call insertTestData(117);
+call insertOdiData(117,1,5,9,0,0,0,1,0,24,21);
+call insertT20Data(117,7,174,126,0,1,7,15,1,12,17);
+
+
+call insertDetail(18,118,'Rinku','Singh','India',25,'1997-10-12','Uttar Pradesh','Batsman','2023-08-18');
+-- call insertTestData(118,);
+-- call insertOdiData(118);
+call insertT20Data(118,2,38,21,0,0,3,2,0,0,0);
+
+
+call insertDetail(19,119,'Shivam','Dube','India',30,'1993-06-26','Mumbai','AllRounder','2019-11-03');
+-- call insertTestData(119,);
+call insertOdiData(119,1,9,6,0,0,0,1,0,47,68);
+call insertT20Data(119,15,127,93,0,1,8,7,5,147,240);
+
+
+call insertDetail(20,120,'Axar','Patel','India',29,'1994-01-20','Gujrat','AllRounder','2014-06-15');
+call insertTestData(120,12,513,958,0,4,17,50,50,2258,858);
+call insertOdiData(120,54,481,473,0,2,24,21,59,2511,1902);
+call insertT20Data(120,45,328,222,0,1,15,25,39,811,1022);
+
+
+call insertDetail(21,121,'Sundar','Washington','India',24,'1999-10-05','Tamilnadu','AllRounder','2017-12-13');
+call insertTestData(121,4,265,502,0,3,5,31,6,526,299);
+call insertOdiData(121,18,251,302,0,1,7,18,16,576,483);
+call insertT20Data(121,37,107,71,0,1,6,10,29,705,851);
+
+
+call insertDetail(22,122,'Avesh','Khan','India',26,'1996-12-13','Madhya Pradesh','Bowler','2022-02-20');
+-- call insertTestData(122);
+call insertOdiData(122,5,13,18,0,0,0,2,3,213,214);
+call insertT20Data(122,15,10,7,0,0,1,0,13,278,422);
+
+
+call insertDetail(23,123,'Shikhar','Dhavan','India',37,'1985-12-05','Delhi','Batsman','2010-10-20');
+call insertTestData(123,34,2315,3458,7,5,12,316,0,54,18);
+call insertOdiData(123,167,6793,7436,17,39,79,842,0,0,0);
+call insertT20Data(123,68,1759,1392,0,11,50,191,0,0,0);
+
+
+call insertDetail(24,124,'Shardul','Thakur','India',31,'1991-10-16','Maharastra','Bowler','2017-08-31');
+call insertTestData(124,10,305,481,0,4,9,38,30,1335,779);
+call insertOdiData(124,44,329,313,0,1,9,31,63,1838,1912);
+call insertT20Data(124,25,69,38,0,0,4,5,33,506,772);
+
+
+call insertDetail(25,125,'Dipak','Chahar','India',31,'1992-08-07','Uttar Pradesh','Bowler','2018-07-08');
+-- call insertTestData(125,);
+call insertOdiData(125,13,203,207,0,2,8,17,16,510,489);
+call insertT20Data(125,24,53,26,0,0,4,4,29,516,703);
+
+
+call insertDetail(26,126,'Arshdeep','Singh','India',24,'1999-02-05','Madhya Pradesh','Bowler','2022-07-07');
+-- call insertTestData(126,);
+call insertOdiData(126,3,9,9,0,0,1,0,0,79,89);
+call insertT20Data(126,33,32,24,0,0,1,3,50,671,949);
+
+
+call insertDetail(27,127,'Bhuvneshwar','Kumar','India',33,'1990-02-05','Uttar Pradesh','Bowler','2012-12-25');
+call insertTestData(127,21,552,1225,0,3,1,77,63,3348,1644);
+call insertOdiData(127,121,552,747,0,1,8,46,141,5847,4951);
+call insertT20Data(127,87,67,94,0,0,0,0,90,1791,2079);
+
+
+call insertDetail(28,128,'Ajinkya','Rahane','India',35,'1988-06-06','Maharastra','Batsman','2013-03-22');
+call insertTestData(128,85,5077,10256,12,26,35,578,0,0,0);
+call insertOdiData(128,90,2962,3767,3,24,33,293,0,0,0);
+call insertT20Data(128,20,375,331,0,1,6,32,0,0,0);
+
+
+call insertDetail(29,129,'Jaydev','Unadkat','India',31,'1991-10-18','Gujrat','Bowler','2010-12-16');
+call insertTestData(129,4,36,89,0,0,1,2,3,474,231);
+call insertOdiData(129,8,0,0,0,0,0,0,9,342,225);
+call insertT20Data(129,10,0,0,0,0,0,0,14,208,301);
+
+
+call insertDetail(30,130,'Krunal','Pandya','India',32,'1991-03-24','Gujrat','AllRounder','2018-11-04');
+-- call insertTestData(130,);
+call insertOdiData(130,5,130,128,0,1,2,11,2,228,223);
+call insertT20Data(130,19,124,95,0,0,6,8,15,410,554);
+
+
+call insertDetail(31,131,'Rishabh','pant','India',25,'1997-10-04','Uttarakhand','Wicketkeeper','2017-02-01');
+call insertTestData(131,33,2271,3084,5,11,55,246,0,0,0);
+call insertOdiData(131,30,865,811,1,5,26,90,0,0,0);
+call insertT20Data(131,66,987,781,0,3,37,86,0,0,0);
+
+
+call insertDetail(32,132,'Yuzvendra','chahal','India',33,'1990-07-23','Haryana','Bowler','2016-06-11');
+--call insertTestData(132,);
+call insertOdiData(132,72,77,141,0,0,0,8,121,3739,3283);
+call insertT20Data(132,80,6,13,0,0,0,0,96,1764,2409);
+
+
+call insertDetail(33,133,'Piyush','Chawla','India',34,'1988-12-24','UtarPradesh','Bowler','2006-03-09');
+call insertTestData(133,3,6,23,0,0,0,1,7,492,270);
+call insertOdiData(133,25,38,58,0,0,0,3,32,1312,1117);
+call insertT20Data(133,7,0,1,0,0,0,0,4,138,151);
+
+
+call insertDetail(34,134,'Dinesh ','Karthik','India',38,'1985-06-01','Tamilnadu','Wicketkeeper','2004-10-12');
+call insertTestData(134,26,1025,2080,1,7,4,134,0,0,0);
+call insertOdiData(134,94,1752,2392,0,9,15,176,0,0,0);
+call insertT20Data(134,60,686,481,0,1,28,71,0,0,0);
+
+
+call insertDetail(35,135,'Nitish','Rana','India',29,'1993-12-27','Delhi','Batsman','2021-07-23');
+--call insertTestData(135,);
+call insertOdiData(135,1,7,14,0,0,0,0,0,18,10);
+call insertT20Data(135,2,15,27,0,0,0,0,0,0,0);
+
+
+call insertDetail(36,136,'Wriddhiman','saha','India',38,'1984-10-24','Bengal','Wicketkeeper','2010-02-06');
+call insertTestData(136,40,1353,2973,3,6,14,129,0,0,0);
+call insertOdiData(136,9,41,56,0,0,0,5,0,0,0);
+--call insertT20Data(136,);
+
+
+call insertDetail(37,137,'Umran', 'Malik','India',23,'1999-11-22','Jammu Kashmir','Bowler','2022-06-26');
+--call insertTestData();
+call insertOdiData(137,10,2,11,0,0,0,0,13,366,399);
+call insertT20Data(137,8,5,2,0,0,0,1,11,143,243);
+
+
+call insertDetail(38,138,'Mohit','Sharma','India',35,'1988-09-18','Haryana','Bowler','2013-08-01');
+--call insertTestData(138,);
+call insertOdiData(138,26,31,66,0,0,0,5,31,1121,1020);
+call insertT20Data(138,8,3,7,0,0,0,0,6,138,185);
+
+
+call insertDetail(39,139,'Vijay','Shankar','India',32,'1991-01-26','Tamilnadu','Allrounder','2018-03-06');
+--call insertTestData();
+call insertOdiData(139,12,223,246,0,0,4,20,4,233,210);
+call insertT20Data(139,9,101,73,0,0,5,11,5,126,191);
+
+
+call insertDetail(40,140,'Mayank','Agarwal','India',32,'1991-02-16','Banglore','Batsman','2018-12-26');
+call insertTestData(140,21,1488,2782,4,6,28,189,0,0,0);
+call insertOdiData(140,5,86,83,0,0,1,12,0,6,10);
+--call insertT20Data(140,);
+
+select * from test;
+select * from odi;
+select * from t20;
+select * from performance;
+select * from player_details;
+
+-- 1)Find the top 10 T20 Format Wicket takers:
+select pd.p_id,pd.first_name,pd.last_name,t20.wicket from player_details as pd inner join performance as p on pd.p_id=p.p_id inner join T20 as t20 on p.per_id=t20.per_id order by wicket desc limit 10; 
+-- 2)Find Average Batting StrikeRate of Players in ODI
+select trunc(Avg(str),2) as Avg_Batting_StrikeRate from odi;
+-- 3)Display The Name of Player Who Hit Maximum Sixes In all Format
+select pd.first_name,pd.last_name,p.sixes from Player_details as pd inner join Performance as p on pd.p_id=p.p_id where p.sixes In (select max(sixes) from performance); 
+-- 4)Find the Player who have taken more then 100 Test Wicket
+select pd.p_id,pd.first_name,pd.last_name,t.wicket from player_details as pd inner join performance as p on pd.p_id=p.p_id inner join Test as t on p.per_id=t.per_id where wicket>100 order by wicket desc; 
+-- 5)Find all Players who Have Sccored more then 3000 runs in Test
+select pd.p_id,pd.first_name,pd.last_name,t.runs from player_details as pd inner join performance as p on pd.p_id=p.p_id inner join Test as t on p.per_id=t.per_id where t.runs>3000; 
+-- 6)Find the top 4 players who have heighest Bating average in Test Format
+select p_id ,first_name,last_name from player_details where p_id in(select p_id from performance as p inner join Test as t on p.per_id=t.per_id order by t.bat_avg desc limit 4)
+-- 7)Find The Players with The Best bowling Average in ODI Format
+select pd.p_id,pd.first_name,pd.last_name,o.bat_avg from player_details as pd inner join performance as p on pd.p_id=p.p_id inner join odi as o on p.per_id=o.per_id order by bat_avg desc limit 1; 
+-- 8)Find The Player Who Have Hheighest Total Centureys in All Format
+select pd.first_name,pd.last_name ,p.centurys from player_details as pd inner join performance as p on pd.p_id=p.p_id where p.centurys in (select max(centurys) from performance);
+-- 9)Display Name of Player who Debut Before 01-01-2010
+select p_id,first_name,last_name,debut from player_details where debut<'2010-01-01';
+-- 10)Display top 3 AllRounder in All Format By Their bating Average,Bowling Average
+select p_id,first_name,last_name from player_details where p_id in (select p_id from performance order by bat_avg,b_avg desc limit 3);
